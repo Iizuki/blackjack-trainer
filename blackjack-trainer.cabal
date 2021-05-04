@@ -20,7 +20,7 @@ executable blackjack-trainer
   main-is:             Main.hs
   other-modules:       Deck
   -- other-extensions:
-  build-depends:       base ^>=4.14.1.0,
+  build-depends:       base ^>=4.14.1.0, random, random-shuffle
   hs-source-dirs:      app
   default-language:    Haskell2010
 

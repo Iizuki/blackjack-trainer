@@ -6,7 +6,7 @@ main :: IO ()
 main = do
   putStrLn "Welcome to BlackJack Trainer!"
   numberOfDecks <- getNumberOfDecks
-  let theDeck = decks numberOfDecks :: Deck
+  theDeck <- shuffledDecks numberOfDecks
   print theDeck -- Debugging
   putStrLn "Bye bye!"
 
