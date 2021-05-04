@@ -1,11 +1,16 @@
 module Main where
 
+import Deck
+
 main :: IO ()
 main = do
   putStrLn "Welcome to BlackJack Trainer!"
-  decks <- getNumberOfDecks
+  numberOfDecks <- getNumberOfDecks
+  let theDeck = decks numberOfDecks :: Deck
+  print theDeck -- Debugging
   putStrLn "Bye bye!"
 
+-- | Ask for a number of decks until a valid number is given. (Only handles numbers tho)
 getNumberOfDecks :: IO Int
 getNumberOfDecks = do
     putStrLn "How many deck's would you like to play with? (1-8)"

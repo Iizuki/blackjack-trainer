@@ -18,7 +18,7 @@ extra-source-files:  CHANGELOG.md
 
 executable blackjack-trainer
   main-is:             Main.hs
-  -- other-modules:
+  other-modules:       Deck
   -- other-extensions:
   build-depends:       base ^>=4.14.1.0,
   hs-source-dirs:      app
@@ -28,5 +28,5 @@ test-suite blackjack-trainer-test
   default-language:    Haskell2010
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
-  main-is:             MyLibTest.hs
-  build-depends:       base ^>=4.14.1.0
+  main-is:             Main.hs
+  build-depends:       base ^>=4.14.1.0, HUnit
