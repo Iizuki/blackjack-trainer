@@ -1,4 +1,4 @@
-module Deck (shuffledDecks) where
+module Deck (Deck, Card, shuffledDecks, draw) where
 
 import System.Random (newStdGen, RandomGen (genRange))
 import System.Random.Shuffle (shuffle')
@@ -33,3 +33,7 @@ shuffledDecks numberOfDecks = do
     rng <- newStdGen
     let shuffledDecks = shuffle' orderedDecks (length orderedDecks) rng :: Deck
     return shuffledDecks
+
+-- | Draw a number of cards from deck.
+draw :: Deck -> Int -> (Deck, [Card])
+draw deckToDrawFrom numberOfCards = splitAt numberOfCards deckToDrawFrom
