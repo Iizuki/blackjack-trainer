@@ -1,35 +1,24 @@
 module Play (play) where
 
 import Deck
+import GameState
 import Hand
+import Action
 import Text.SimpleTableGenerator
 import Control.Monad.State
 import Control.Monad (when)
 
--- | Data structures for storing game state
-data GameState = GameState {
-    deck :: Deck,
-    money :: Int,
-    dealerHand :: [Card],
-    playerHand1 :: [Card],
-    playerHand2 :: [Card], -- Only used in case of a split
-    bet :: Int,
-    split :: Bool, -- A split has occured
-    hand2Active :: Bool -- A split has occured and the second hand is active
-}
 
--- | Possible player actions in the game
-data GameAction = Stand | Hit | Double | Split
-
--- | Play the game!
+-- | Initialize the actual game
 play :: Deck -> Int -> IO ()
 play deck money = do 
     let initialGameState = GameState deck money [] [] [] 0 False False :: GameState
+    print "The game begins!"
     runStateT playRound initialGameState
     return ()
 
 
--- | Play one round
+-- | Play the game one round at a time
 playRound :: StateT GameState IO ()
 playRound = do
     liftIO $ putStrLn "New Round!"
@@ -41,12 +30,14 @@ playRound = do
     handWasSplit <- gets split
     -- TODO update active hand
     when handWasSplit playHand 
+    playRound -- TODO some check to prevent infinite loop
+
 
 -- | Play one hand, as in blackjack, splitting can result in player having multiple hands.
 playHand :: StateT GameState IO ()
 playHand = do
     printGameState
-    liftIO $ print "Choose your action"
+    playerAction <- chooseAction
     return ()
 
 
@@ -63,13 +54,6 @@ placeBet = do
     else 
         modify (setBet bet)
 
-
--- | Setter for bet in GameState
-setBet :: Int -> GameState -> GameState
-setBet newBet oldState = 
-    let
-        oldMoney = money oldState
-    in oldState { bet = newBet, money = oldMoney - newBet}
 
 
 -- | Draws one card for the dealer.
@@ -97,48 +81,9 @@ drawForPlayer number = do
     put newState
 
 
--- | Determines the list of legal actions in the current state of the game
-legalActions :: Monad m => StateT GameState m [GameAction]
-legalActions = do
-    addDouble <- doublePossible
-    addSplit <- splitPossible
-    addHit <- hitPossible
-    return [] -- TODO
-
-
--- | Doubling is possible if you can afford it and there are no splits.
-doublePossible :: Monad m => StateT GameState m Bool
-doublePossible = do
-    handIsSplit <- gets split
-    if handIsSplit
-        then return False -- No doubling together with splitting
-        else do
-            moneyLeft <- gets money
-            currentBet <- gets bet
-            return $ moneyLeft >= (2 * currentBet)
-
-
-splitPossible :: Monad m => StateT GameState m Bool
-splitPossible = do
-    state <- get
-    if split state 
-        then return False -- Splitting is allowed only once
-    else do
-        let hand = activeHand state
-            evaluatedHand = evaluateHand hand
-        return $ evaluatedHand == Pair
-
-
-hitPossible :: Monad m => StateT GameState m Bool
-hitPossible = do
-    hand <- gets activeHand
-    return $ sumCards hand <= 21
-
-
--- | Gets the hand that is currently active from the state.
-activeHand :: GameState -> [Card]
-activeHand state    | hand2Active state = playerHand2 state
-                    | otherwise = playerHand1 state
+-- | Dropping the parenthesis
+getPrettyHand :: [Card] -> String 
+getPrettyHand hand = tail $ init $ show hand
 
 
 -- | Prints the state of the game to the console in a table format.
@@ -148,7 +93,8 @@ printGameState = do
     let cardsLeftInDeck = show $ length $ deck state :: String
         moneyLeft = show $ money state :: String
         bet' = show $ bet state
-        dealerHand' = tail $ init (show $ dealerHand state) :: String -- Dropping the parenthesis
-        graphicalState =    [["Deck", "Money", "Bet", "Dealer Hand"], 
-                            [cardsLeftInDeck, moneyLeft, bet', dealerHand']] :: [[String]]
+        dealerHand' = getPrettyHand $ dealerHand state :: String 
+        playerHand = getPrettyHand $ activeHand state
+        graphicalState =    [["Deck", "Money", "Bet", "Dealer Hand", "Your hand"], 
+                            [cardsLeftInDeck, moneyLeft, bet', dealerHand', playerHand]] :: [[String]]
     liftIO $ putStrLn $ makeDefaultSimpleTable graphicalState

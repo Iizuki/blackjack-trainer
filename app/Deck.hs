@@ -46,7 +46,8 @@ instance Enum Card where
 -- | Returns a normal deck of 52 cards
 getOrderedDeck::Deck
 -- Had to do the list comprehension in a bit funny way since Card Enum instance is not injective
-getOrderedDeck = [card | card <- [Ace .. Ten] ++ [Jack, Queen, King], _ <- [1 .. 4]] 
+getOrderedDeck = [card | card <- suit, _ <- [1 .. 4]] where
+    suit = [Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King, Ace]
 
 -- | Returns a deck that consists of n normal decks.
 decks :: Int -> Deck

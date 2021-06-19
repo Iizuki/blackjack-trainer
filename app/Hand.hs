@@ -2,6 +2,7 @@ module Hand where
 
 import Deck
 
+-- | A player hand will be evaluated as one of these types
 data Hand = Ordinary | Pair | Blackjack | Bust deriving(Eq)
 
 -- | Calculates the sum of card values according to the rules of blackjack.
