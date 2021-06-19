@@ -148,8 +148,7 @@ printGameState = do
     let cardsLeftInDeck = show $ length $ deck state :: String
         moneyLeft = show $ money state :: String
         bet' = show $ bet state
-        dealerHand' = tail $ init (show $ dealerHand state) -- Dropping the parenthesis
+        dealerHand' = tail $ init (show $ dealerHand state) :: String -- Dropping the parenthesis
         graphicalState =    [["Deck", "Money", "Bet", "Dealer Hand"], 
-                            [cardsLeftInDeck, moneyLeft, bet', dealerHand']]
+                            [cardsLeftInDeck, moneyLeft, bet', dealerHand']] :: [[String]]
     liftIO $ putStrLn $ makeDefaultSimpleTable graphicalState
-    return ()

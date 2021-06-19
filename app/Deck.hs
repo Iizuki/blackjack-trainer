@@ -1,4 +1,4 @@
-module Deck (Deck, Card(..), shuffledDecks, draw) where
+module Deck where
 
 import System.Random (newStdGen, RandomGen (genRange))
 import System.Random.Shuffle (shuffle')
@@ -44,17 +44,18 @@ instance Enum Card where
     toEnum _ = King -- No need to go this way
 
 -- | Returns a normal deck of 52 cards
-deck::Deck
-deck = [card | card <- [Two .. Ace], _ <- [1 .. 4]]
+getOrderedDeck::Deck
+-- Had to do the list comprehension in a bit funny way since Card Enum instance is not injective
+getOrderedDeck = [card | card <- [Ace .. Ten] ++ [Jack, Queen, King], _ <- [1 .. 4]] 
 
 -- | Returns a deck that consists of n normal decks.
 decks :: Int -> Deck
-decks n = decks' deck n
+decks n = decks' getOrderedDeck n
 
 decks' :: Deck -> Int -> Deck
 decks' _ 0 = []
 decks' deckSoFar 1 = deckSoFar
-decks' deckSoFar n = decks' (deckSoFar ++ deck) (n-1)
+decks' deckSoFar n = decks' (deckSoFar ++ getOrderedDeck) (n-1)
 
 
 -- | Returns a deck that consists of n decks shuffled together.

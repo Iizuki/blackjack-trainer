@@ -17,7 +17,7 @@ main = do
 getNumberOfDecks :: IO Int
 getNumberOfDecks = do
     putStrLn "How many deck's would you like to play with? (1-8)"
-    input <- getLine 
+    input <- getLine
     let numberOfDecks = (read input :: Int)
     if 0 < numberOfDecks && numberOfDecks < 9
         then return numberOfDecks
@@ -27,7 +27,7 @@ getNumberOfDecks = do
 askForMoney :: IO Int
 askForMoney = do
     putStrLn "How much money would you like? (No Cents)"
-    input <- getLine 
+    input <- getLine
     let cashRequested = (read input :: Int)
     if 0 < cashRequested
         then return cashRequested

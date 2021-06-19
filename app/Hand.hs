@@ -19,11 +19,11 @@ evaluateHand :: [Card] -> Hand
 evaluateHand [] = Ordinary
 evaluateHand [x] = Ordinary
 evaluateHand [x,y] 
-    | fromEnum x == fromEnum y = Pair -- All tens are treated the same. I.e. J & Q is a pair.
-    | x == Ace, fromEnum y == 10 = Blackjack
-    | y == Ace, fromEnum x == 10 = Blackjack
-    | otherwise = Ordinary
+    | fromEnum x == fromEnum y      = Pair -- All tens are treated the same. I.e. J & Q is a pair.
+    | x == Ace, fromEnum y == 10    = Blackjack
+    | y == Ace, fromEnum x == 10    = Blackjack
+    | otherwise                     = Ordinary
 evaluateHand threeOrMoreCards
     | cardSum <- sumCards threeOrMoreCards
-    , cardSum < 22 = Ordinary
-    | otherwise = Bust
+    , cardSum < 22  = Ordinary
+    | otherwise     = Bust
