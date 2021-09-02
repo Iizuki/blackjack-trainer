@@ -1,6 +1,9 @@
 module Hand where
 
 import Deck
+import GameState
+import Data.Bool (Bool)
+import Data.Int (Int)
 
 -- | A player hand will be evaluated as one of these types
 data Hand = Ordinary | Pair | Blackjack | Bust deriving(Eq)
@@ -28,3 +31,16 @@ evaluateHand threeOrMoreCards
     | cardSum <- sumCards threeOrMoreCards
     , cardSum < 22  = Ordinary
     | otherwise     = Bust
+
+
+-- | Evaluate the currently selected hand
+evaluateCurrentHand :: GameState -> Hand
+evaluateCurrentHand state = evaluateHand $ activeHand state
+
+-- | Sum of the current hand
+currentHandSum :: GameState -> Int
+currentHandSum state = sumCards $ activeHand state
+
+-- | Tells whether the hand is resolved, i.e. the dealer doesn't need to play his hand after bust.
+handIsResolved :: [Card] -> Bool
+handIsResolved hand = evaluateHand hand == Bust
