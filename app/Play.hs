@@ -4,11 +4,9 @@ import Deck
 import GameState
 import Hand
 import Action
-import Text.SimpleTableGenerator
+import Text.SimpleTableGenerator -- Used for printing the game state
 import Control.Monad.State
-import Control.Monad
 import Data.Bool (Bool)
-import GHC.Base (Bool)
 
 
 -- | Initialize the actual game
@@ -28,11 +26,11 @@ playRound = do
     draw1ForDealer  -- Initial hand for the dealer
     drawForPlayer 2 -- Intitial hand for the player
     playHand
-    -- Play the other hand too if a split occured
     handWasSplit <- gets split
-    when handWasSplit playSplitHand
-
+    when handWasSplit playSplitHand -- Play the other hand too if a split occured 
+    --TODO: playing splithand doesn't seem to quite work ATM
     dealerPlays -- Dealer plays his turn (unless the player lost already)
+    payWinnings -- Resolve the round outcome and pay winnings
     modify clearHandsAndBets -- Cleanup for the next round
     playRound -- TODO some check to prevent infinite loop
 
@@ -127,6 +125,25 @@ drawForPlayer number = do
     put newState
 
 
+-- | Determines which hands won and pays their winnings along with some IO printing.
+payWinnings :: StateT GameState IO ()
+payWinnings = payHand False
+    >> gets split
+    >>= \splitPlayed -> when splitPlayed $ payHand True
+
+-- | Resolve hand and pay possible winnings. This also informs the player of the outcome.
+payHand :: Bool -- ^ Paying hand 2?
+    -> StateT GameState IO ()
+payHand splitHand 
+    = do
+    state <- get
+    let handResult = compareHands (playerHand1 state) (dealerHand state)
+        winning = calculateWin handResult (bet state)
+        handNumber = if splitHand then 2 else 1 -- Convert boolean to handnumber int
+    liftIO $ putStrLn $ handResultMessage handNumber handResult winning
+    -- TODO: actual paying 
+
+
 -- | Executes the given player action.
 --   This doesn't check the legality of the given action.
 executeAction :: Monad m => Action -> StateT GameState m ()
@@ -157,7 +174,39 @@ executeAction Split = do
     modify $ setHand2Active False
 
 
+calculateWin :: HandResult -> Int -> Int 
+calculateWin result _ 
+    | result == Lose = 0
+    | result == BustLose = 0
+calculateWin result bet
+    | result == Draw = bet -- Bet is returned in case of a draw
+    | result == Win || result == DealerBustWin = 2 * bet -- Bet payed back in double in case of normal win
+    | result == BlackjackWin = floor $ (2.5 :: Float) * fromIntegral bet-- Blackjack wins are payed at 3:2 odds
+    | otherwise = error "Calculating the winning failed"
+
+
 -- Printing
+
+-- | A string that informs the player of how the hand ended.
+handResultMessage :: Int -- ^ Hand number, 1 or 2
+    -> HandResult   -- ^ The result of this hand
+    -> Int          -- ^ Amount won. Won't be displayed if the hand didn't win.
+    -> String       -- ^ Message to show to the player
+handResultMessage handNumber result _ 
+    | result == BustLose = handNumberString handNumber ++ "busted, house wins."
+    | result == Lose = handNumberString handNumber ++ "lost, house wins."
+    | result == Draw = handNumberString handNumber ++ "is a draw, bet is returned."
+handResultMessage handNumber result win
+    | result == DealerBustWin = "Dealer busted, " ++ handNumberString handNumber ++ winsString win
+    | result == Win = handNumberString handNumber ++ winsString win
+    | result == BlackjackWin = "Blackjack! " ++ handNumberString handNumber ++ winsString win
+    | otherwise = error "Parsing the message of the hand outcome failed"
+
+handNumberString :: Int -> String
+handNumberString handNumber = "Hand " ++ show handNumber ++ " "
+
+winsString :: Int -> String
+winsString winning = "wins " ++ show winning ++ "!" -- DEBUG NUMBER
 
 -- | Dropping the parenthesis
 getPrettyHand :: [Card] -> String 
