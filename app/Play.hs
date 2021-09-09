@@ -29,7 +29,6 @@ playRound = do
     playHand
     handWasSplit <- gets split
     when handWasSplit playSplitHand -- Play the other hand too if a split occured 
-    --TODO: playing splithand doesn't seem to quite work ATM
     dealerPlays -- Dealer plays his turn (unless the player lost already)
     resolveRound -- Resolve the round outcome and pay winnings
     modify clearHandsAndBets -- Cleanup for the next round
