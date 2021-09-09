@@ -5,6 +5,7 @@ import Deck
 -- | Data structure for storing the game state
 data GameState = GameState {
     deck :: Deck,
+    discardPile :: Deck,
     money :: Int,
     dealerHand :: [Card],
     playerHand1 :: [Card],
@@ -23,6 +24,7 @@ setBet newBet oldState =
         oldMoney = money oldState
     in oldState { bet = newBet, money = oldMoney - newBet}
 
+
 -- | Special case of the above to double the bet.
 doubleBet :: GameState -> GameState
 doubleBet oldState =
@@ -32,16 +34,31 @@ doubleBet oldState =
         doubledBet = 2 * oldBet
     in oldState {bet = doubledBet, money = oldMoney - oldBet}
 
+
 -- | Gets the hand that is currently active from the state.
 activeHand :: GameState -> [Card]
 activeHand state    | hand2Active state = playerHand2 state
                     | otherwise = playerHand1 state
 
--- | Clear player and dealer hands along with the bet
+
+-- | Clear player and dealer hands along with the bet.
+--   Used cards are moved to the discard pile.
 clearHandsAndBets :: GameState -> GameState
 clearHandsAndBets oldState = oldState {playerHand1 = [], playerHand2 = [], dealerHand = [], bet = 0, 
-    split = False, hand2Active = False}
+    split = False, hand2Active = False, discardPile = oldDiscardPile ++ discardedCards}
+    where 
+        oldDiscardPile = discardPile oldState
+        discardedCards = playerHand1 oldState ++ playerHand2 oldState ++ dealerHand oldState
 
 -- | Set a hand2active to the given boolean value
 setHand2Active :: Bool -> GameState -> GameState
 setHand2Active value oldState = oldState {hand2Active = value}
+
+
+-- | Add winning to the player's money
+payWinnings :: Int -> GameState -> GameState
+
+payWinnings 0 oldState = oldState -- 0 win means no win
+
+payWinnings winning oldState = oldState {money = oldMoney + winning}
+    where oldMoney = money oldState

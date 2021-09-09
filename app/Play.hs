@@ -12,7 +12,7 @@ import Data.Bool (Bool)
 -- | Initialize the actual game
 play :: Deck -> Int -> IO ()
 play deck money = do 
-    let initialGameState = GameState deck money [] [] [] 0 False False :: GameState
+    let initialGameState = GameState deck [] money [] [] [] 0 False False :: GameState
     print "The game begins!"
     runStateT playRound initialGameState
     return ()
@@ -22,6 +22,7 @@ play deck money = do
 playRound :: StateT GameState IO ()
 playRound = do
     liftIO $ putStrLn "New Round!"
+    printGameState
     placeBet
     draw1ForDealer  -- Initial hand for the dealer
     drawForPlayer 2 -- Intitial hand for the player
@@ -30,9 +31,13 @@ playRound = do
     when handWasSplit playSplitHand -- Play the other hand too if a split occured 
     --TODO: playing splithand doesn't seem to quite work ATM
     dealerPlays -- Dealer plays his turn (unless the player lost already)
-    payWinnings -- Resolve the round outcome and pay winnings
+    resolveRound -- Resolve the round outcome and pay winnings
     modify clearHandsAndBets -- Cleanup for the next round
-    playRound -- TODO some check to prevent infinite loop
+    moneyLeft <- gets money
+    if moneyLeft > 0 
+        then playRound -- There's still money left, play another round
+    else 
+        liftIO $ putStrLn "You wen't broke, game over."
 
 
 -- | Play one hand.
@@ -61,7 +66,7 @@ playHand = do
 -- | Play the second hand when a split has occurred. Assumes that the first two cards are already drawn.
 --   The actual playing is handled by the same function that played the first hand. This just sets things ready.
 playSplitHand :: StateT GameState  IO ()
-playSplitHand = liftIO (putStrLn "Playing the 2nd hand of the split now.")
+playSplitHand = liftIO (putStrLn "Playing the 2nd hand of the split now:")
     >> modify (setHand2Active True)
     >> playHand
 
@@ -76,7 +81,7 @@ placeBet = do
         -- The bet was illegal
         then placeBet
     else 
-        modify (setBet bet)
+        modify $ setBet bet
 
 
 -- | Determines whether the dealer needs to take his turn or is the round over already.
@@ -94,7 +99,7 @@ dealerPlays = get >>= \state -> pure (dealerNeedsToPlay state)
     >> printGameState
 
 -- | Dealer draws cards until his score is at least 17
-dealerDrawsUntilDone :: Monad m => StateT GameState m ()
+dealerDrawsUntilDone :: StateT GameState IO ()
 dealerDrawsUntilDone = draw1ForDealer
     >> gets dealerHand
     >>= \hand -> pure (sumCards hand)
@@ -102,32 +107,57 @@ dealerDrawsUntilDone = draw1ForDealer
 
 
 -- | Draws one card for the dealer.
-draw1ForDealer :: (Monad m) => StateT GameState m ()
+draw1ForDealer :: StateT GameState IO ()
 draw1ForDealer = do
+    drawedCard <- drawAndShuffleIfNecessary 1
     state <- get 
-    let currentDeck = deck state
-        currentDealerHand = dealerHand state
-        (drawedCard, newDeck) = draw currentDeck 1
-        newState = state { deck = newDeck, dealerHand = currentDealerHand ++ drawedCard}
+    let currentDealerHand = dealerHand state
+        newState = state {dealerHand = currentDealerHand ++ drawedCard}
     put newState
 
 
 -- | Draw a number of cards to the player, typically 1 or 2 in blackjack.
-drawForPlayer :: Monad m => Int -> StateT GameState m ()
+drawForPlayer :: Int -> StateT GameState IO ()
 drawForPlayer number = do
+    drawedCards <- drawAndShuffleIfNecessary number
     state <- get
-    let currentDeck = deck state
-        hand2 = hand2Active state
+    let hand2 = hand2Active state
         currentHand = activeHand state
-        (drawedCards, newDeck) = draw currentDeck number
-        newState  | hand2       = state { deck = newDeck, playerHand2 = currentHand ++ drawedCards}
-                  | otherwise   = state { deck = newDeck, playerHand1 = currentHand ++ drawedCards}
+        newState  | hand2       = state { playerHand2 = currentHand ++ drawedCards}
+                  | otherwise   = state { playerHand1 = currentHand ++ drawedCards}
     put newState
 
 
+-- | Draw a number of cards from the current deck. The drawed cards are returned.
+--   Don't call this directly. Use drawAndShuffleIfNecessary instead.
+drawFromCurrentDeck :: Monad m => Int -> StateT GameState m [Card]
+drawFromCurrentDeck cardsToDraw = do
+    state <- get
+    let currentDeck = deck state
+        (drawedCards, newDeck) = draw currentDeck cardsToDraw
+        newState = state { deck = newDeck}
+    put newState
+    return drawedCards
+
+
+-- | Draw a number of cards and shuffle the discardpile back into the deck if there are not enough cards to make the draw.
+drawAndShuffleIfNecessary :: Int -> StateT GameState IO [Card]
+drawAndShuffleIfNecessary cardsToDraw = do
+    state <- get 
+    let currentDeck = deck state
+    if length currentDeck >= cardsToDraw
+        then drawFromCurrentDeck cardsToDraw
+    else do
+        liftIO $ putStrLn "Shuffling discard pile back into the deck."
+        let cardsToShuffle = currentDeck ++ discardPile state
+        newDeck <- lift $ shuffleCards cardsToShuffle
+        put state {deck = newDeck, discardPile = []}
+        drawFromCurrentDeck cardsToDraw   
+
+
 -- | Determines which hands won and pays their winnings along with some IO printing.
-payWinnings :: StateT GameState IO ()
-payWinnings = payHand False
+resolveRound :: StateT GameState IO ()
+resolveRound = payHand False
     >> gets split
     >>= \splitPlayed -> when splitPlayed $ payHand True
 
@@ -137,16 +167,17 @@ payHand :: Bool -- ^ Paying hand 2?
 payHand splitHand 
     = do
     state <- get
-    let handResult = compareHands (playerHand1 state) (dealerHand state)
+    let playerHand = if splitHand then playerHand2 state else playerHand1 state
+        handResult = compareHands playerHand (dealerHand state)
         winning = calculateWin handResult (bet state)
         handNumber = if splitHand then 2 else 1 -- Convert boolean to handnumber int
-    liftIO $ putStrLn $ handResultMessage handNumber handResult winning
-    -- TODO: actual paying 
+    liftIO $ putStrLn $ handResultMessage handNumber handResult winning -- Let the player know how the round went
+    modify $ payWinnings winning -- Pay the player
 
 
 -- | Executes the given player action.
 --   This doesn't check the legality of the given action.
-executeAction :: Monad m => Action -> StateT GameState m ()
+executeAction :: Action -> StateT GameState IO ()
 executeAction Stand = return () -- No operation
 
 executeAction Hit = drawForPlayer 1 -- Hitting just means drawing one more card.
@@ -165,13 +196,14 @@ executeAction Split = do
         oldMoney = money state
         newMoney = oldMoney - currentBet -- The the current bet is subtracted from the money a second time, as the splithand
                                          -- implicityly receives the same bet.
-        newState = state {playerHand1 = [newCurrentHand], playerHand2 = newSplitHand, money = newMoney}
+        newState = state {playerHand1 = [newCurrentHand], playerHand2 = newSplitHand, money = newMoney, split = True}
     put newState -- This is not ready yet
     drawForPlayer 1 -- Draw a replacement card to the player's current hand
     -- Temporarily activate the split hand in order to draw a card to it.
     modify $ setHand2Active True 
     drawForPlayer 1
     modify $ setHand2Active False
+    liftIO $ putStrLn "Playing the first hand of the split now:"
 
 
 calculateWin :: HandResult -> Int -> Int 

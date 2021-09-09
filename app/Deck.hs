@@ -51,7 +51,7 @@ getOrderedDeck = [card | card <- suit, _ <- [1 .. 4]] where
 
 -- | Returns a deck that consists of n normal decks.
 decks :: Int -> Deck
-decks n = decks' getOrderedDeck n
+decks = decks' getOrderedDeck
 
 decks' :: Deck -> Int -> Deck
 decks' _ 0 = []
@@ -61,10 +61,13 @@ decks' deckSoFar n = decks' (deckSoFar ++ getOrderedDeck) (n-1)
 
 -- | Returns a deck that consists of n decks shuffled together.
 shuffledDecks :: Int -> IO Deck
-shuffledDecks numberOfDecks = do
-    let orderedDecks = decks numberOfDecks
+shuffledDecks = shuffleCards . decks 
+
+-- | Shuffle a pack of cards
+shuffleCards :: Deck -> IO Deck
+shuffleCards cards = do
     rng <- newStdGen
-    let shuffledDecks = shuffle' orderedDecks (length orderedDecks) rng :: Deck
+    let shuffledDecks = shuffle' cards (length cards) rng :: Deck
     return shuffledDecks
 
 -- | Draw a number of cards from deck.
