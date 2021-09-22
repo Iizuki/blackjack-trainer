@@ -7,6 +7,7 @@ import Action
 import Text.SimpleTableGenerator -- Used for printing the game state
 import Control.Monad.State
 import Data.Bool (Bool)
+import Strategy (correctAction)
 
 
 -- | Initialize the actual game
@@ -43,8 +44,13 @@ playRound = do
 --   In blackjack splitting can result in player having multiple hands so this might be called several times.
 playHand :: StateT GameState IO ()
 playHand = do
+    state <- get
     printGameState
     playerAction <- chooseAction
+    -- Analyse whether the choice was correct
+    let whatYouShouldHaveChosen = correctAction state
+    liftIO $ printChoiceFeedback playerAction whatYouShouldHaveChosen
+    -- Actually excecute the chosen action
     executeAction playerAction
     if playerAction == Stand 
         then return ()
@@ -218,6 +224,13 @@ calculateWin result bet
 
 -- Printing
 
+printChoiceFeedback :: Action -> Maybe Action -> IO ()
+printChoiceFeedback _ Nothing = return () -- Nothing to comment
+printChoiceFeedback chosenAction (Just rightAction)
+    | chosenAction == rightAction   = putStrLn "Correct choice." -- The player had chosen according to theory.
+    | otherwise                     = putStrLn $ "You should have chosen: " ++ show rightAction 
+
+
 -- | A string that informs the player of how the hand ended.
 handResultMessage :: Int -- ^ Hand number, 1 or 2
     -> HandResult   -- ^ The result of this hand
@@ -237,7 +250,7 @@ handNumberString :: Int -> String
 handNumberString handNumber = "Hand " ++ show handNumber ++ " "
 
 winsString :: Int -> String
-winsString winning = "wins " ++ show winning ++ "!" -- DEBUG NUMBER
+winsString winning = "wins " ++ show winning ++ "!"
 
 -- | Dropping the parenthesis
 getPrettyHand :: [Card] -> String 

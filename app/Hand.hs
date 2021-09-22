@@ -6,7 +6,12 @@ import Data.Bool (Bool)
 import Data.Int (Int)
 
 -- | A player hand will be evaluated as one of these types
-data Hand = Ordinary | Pair | Blackjack | Bust deriving(Eq)
+data Hand = Soft -- ^ A hand is soft if it has an Ace counted as 11, and it's not a blackjack.
+    | Hard -- ^ A hand is hard if it doesn't have an Ace counted as 11, and it doesn't belong into any of the other categories as well.
+    | Pair 
+    | Blackjack 
+    | Bust 
+    deriving(Eq)
 
 -- | A fully evaluated hand. Contains the sum of the cards together with the blackjack hand status.
 --   The main point of this is that a blackjack beats an ordinary 21.
@@ -27,17 +32,29 @@ sumCards cards  = sum (map fromEnum cards) + aceBonus
 
 -- | Determine the type of the hand
 evaluateHand :: [Card] -> Hand
-evaluateHand [] = Ordinary
-evaluateHand [x] = Ordinary
+evaluateHand [] = Hard
+evaluateHand [x] 
+    | x == Ace  = Soft
+    | otherwise = Hard
 evaluateHand [x,y] 
     | fromEnum x == fromEnum y      = Pair -- All tens are treated the same. I.e. J & Q is a pair.
     | x == Ace, fromEnum y == 10    = Blackjack
     | y == Ace, fromEnum x == 10    = Blackjack
-    | otherwise                     = Ordinary
+    | x == Ace || y == Ace          = Soft -- 2-card hands with an ace are alway soft unless it's a blackjack.
+    | otherwise                     = Hard
 evaluateHand threeOrMoreCards
     | cardSum <- sumCards threeOrMoreCards
-    , cardSum < 22  = Ordinary
+    , cardSum < 22  = handHardness threeOrMoreCards
     | otherwise     = Bust
+
+
+-- | Returns wheterh the hand is soft or hard.
+handHardness :: [Card] -> Hand
+handHardness hand
+    | Ace `elem` hand = if sum (map fromEnum hand) < 12 
+        then Soft
+        else Hard
+    | otherwise = Hard
 
 
 -- | Evaluate the currently selected hand

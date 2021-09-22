@@ -18,10 +18,10 @@ extra-source-files:  CHANGELOG.md
 
 executable blackjack-trainer
   main-is:             Main.hs
-  other-modules:       Deck, Action, GameState, Play, Hand
+  other-modules:       Deck, Action, GameState, Play, Hand, Strategy
   -- other-extensions:
   build-depends:       base ^>=4.14.1.0, random, random-shuffle, SimpleTableGenerator,
-    mtl
+    mtl, array
   hs-source-dirs:      app
   default-language:    Haskell2010
 
