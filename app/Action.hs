@@ -61,7 +61,7 @@ chooseAction = do
     state <- get
     let choices = legalActions state
         message = "Choose your action (" ++ dropParenthesis(show choices) ++ ")"
-    liftIO $ print message
+    liftIO $ putStrLn message
     input <- liftIO getLine
     let action = read input :: Action -- This will crash on invalid input but that's acceptable in this project.
     return action

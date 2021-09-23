@@ -14,7 +14,7 @@ import Strategy (correctAction)
 play :: Deck -> Int -> IO ()
 play deck money = do 
     let initialGameState = GameState deck [] money [] [] [] 0 False False :: GameState
-    print "The game begins!"
+    putStrLn "The game begins!"
     runStateT playRound initialGameState
     return ()
 
@@ -79,7 +79,7 @@ playSplitHand = liftIO (putStrLn "Playing the 2nd hand of the split now:")
 placeBet :: StateT GameState IO ()
 placeBet = do
     moneyLeft <- gets money
-    liftIO $ print "Place your bet:"
+    liftIO $ putStrLn "Place your bet:"
     input <- liftIO getLine 
     let bet = (read input :: Int)
     if bet < 1 || bet > moneyLeft
