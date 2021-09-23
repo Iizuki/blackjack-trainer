@@ -85,7 +85,7 @@ compareHands playerHand dealerHand = let
 -- | Compare fully evaluated hands
 compareEvaluatedHands :: HandEvaluation -> HandEvaluation -> HandResult
 compareEvaluatedHands playerHand dealerHand
-    | status playerHand == Bust = Lose -- Busted player always loses
+    | status playerHand == Bust = BustLose -- Busted player always loses
 
     | status playerHand == Blackjack
     , status dealerHand /= Blackjack = BlackjackWin -- Blackjack beats 21's composed in other ways

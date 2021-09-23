@@ -93,15 +93,15 @@ placeBet = do
 dealerNeedsToPlay :: GameState -> Bool
 dealerNeedsToPlay state = not (hand1IsResolved && hand2IsResolved)
     where hand1IsResolved = handIsResolved $ playerHand1 state
-          hand2IsResolved = not (split state) && handIsResolved (playerHand2 state)
+          hand2IsResolved = not (split state) || handIsResolved (playerHand2 state)
 
 
 -- | Dealer plays his turn if necessary
 dealerPlays :: StateT GameState IO ()
 dealerPlays = get >>= \state -> pure (dealerNeedsToPlay state)
-    >>= \needToPlay -> when needToPlay dealerDrawsUntilDone
-    >> liftIO (putStrLn "Dealer's turn:")
-    >> printGameState
+    >>= \needToPlay -> when needToPlay ( dealerDrawsUntilDone
+        >> liftIO (putStrLn "Dealer's turn:")
+        >> printGameState)
 
 -- | Dealer draws cards until his score is at least 17
 dealerDrawsUntilDone :: StateT GameState IO ()
@@ -173,7 +173,7 @@ payHand splitHand
     = do
     state <- get
     let playerHand = if splitHand then playerHand2 state else playerHand1 state
-        handResult = compareHands playerHand (dealerHand state)
+        handResult = compareHands playerHand $ dealerHand state
         winning = calculateWin handResult (bet state)
         handNumber = if splitHand then 2 else 1 -- Convert boolean to handnumber int
     liftIO $ putStrLn $ handResultMessage handNumber handResult winning -- Let the player know how the round went
